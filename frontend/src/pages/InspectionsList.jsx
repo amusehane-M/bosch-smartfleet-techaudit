@@ -1,63 +1,108 @@
 import React, { useState } from 'react';
-import { ClipboardCheck, Award } from 'lucide-react';
+import { ClipboardCheck, Award, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function InspectionsList({ inspections = [], onCompleteInspection }) {
   const [selectedAudit, setSelectedAudit] = useState(null);
   const [inspectorName, setInspectorName] = useState('J. van der Merwe');
 
-  // Interactive audit checklist items
+  // Interactive audit checklist items with defect note fields and critical flags
   const [checklist, setChecklist] = useState([
-    { id: 'brakes', label: 'Brake System & ABS Functionality', passed: true },
-    { id: 'tires', label: 'Tire Tread Depth & Pressure Verification', passed: true },
-    { id: 'lights', label: 'Headlights, Signal Indicators & Brake Lights', passed: true },
-    { id: 'emissions', label: 'Exhaust & Emission Compliance Audit', passed: true },
-    { id: 'steering', label: 'Steering Mechanism & Suspension Alignment', passed: true },
+    { id: 'brakes', label: 'Brake System & ABS Functionality', passed: true, isCritical: true, note: '' },
+    { id: 'tires', label: 'Tire Tread Depth & Pressure Verification', passed: true, isCritical: false, note: '' },
+    { id: 'lights', label: 'Headlights, Signal Indicators & Brake Lights', passed: true, isCritical: false, note: '' },
+    { id: 'emissions', label: 'Exhaust & Emission Compliance Audit', passed: true, isCritical: false, note: '' },
+    { id: 'steering', label: 'Steering Mechanism & Suspension Alignment', passed: true, isCritical: true, note: '' },
   ]);
 
+  const [selectedOutcome, setSelectedOutcome] = useState('PASS');
+
+  // Open modal and reset/calculate default state
+  const handleOpenModal = (item) => {
+    setSelectedAudit(item);
+    const initialChecklist = [
+      { id: 'brakes', label: 'Brake System & ABS Functionality', passed: true, isCritical: true, note: '' },
+      { id: 'tires', label: 'Tire Tread Depth & Pressure Verification', passed: true, isCritical: false, note: '' },
+      { id: 'lights', label: 'Headlights, Signal Indicators & Brake Lights', passed: true, isCritical: false, note: '' },
+      { id: 'emissions', label: 'Exhaust & Emission Compliance Audit', passed: true, isCritical: false, note: '' },
+      { id: 'steering', label: 'Steering Mechanism & Suspension Alignment', passed: true, isCritical: true, note: '' },
+    ];
+    setChecklist(initialChecklist);
+    setSelectedOutcome('PASS');
+  };
+
   const handleToggleCheck = (id) => {
+    setChecklist((prev) => {
+      const updated = prev.map((item) =>
+        item.id === id ? { ...item, passed: !item.passed } : item
+      );
+
+      // Recalculate suggested outcome based on unchecked items
+      const failedItems = updated.filter((item) => !item.passed);
+      const failedCritical = failedItems.some((item) => item.isCritical);
+
+      if (failedItems.length === 0) {
+        setSelectedOutcome('PASS');
+      } else if (failedCritical || failedItems.length >= 3) {
+        setSelectedOutcome('FAIL');
+      } else {
+        setSelectedOutcome('PASS WITH CONDITION');
+      }
+
+      return updated;
+    });
+  };
+
+  const handleNoteChange = (id, text) => {
     setChecklist((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, passed: !item.passed } : item))
+      prev.map((item) => (item.id === id ? { ...item, note: text } : item))
     );
   };
 
   const handleFinishInspection = () => {
     if (!selectedAudit) return;
 
-    // Calculate score percentage based on checklist items passed
     const passedItems = checklist.filter((item) => item.passed).length;
     const scorePercent = Math.round((passedItems / checklist.length) * 100);
-    const auditOutcome = scorePercent >= 70 ? 'Passed' : 'Failed';
+
+    // Collect defect conditions
+    const failedItems = checklist.filter((item) => !item.passed);
+    const conditionsSummary = failedItems
+      .map((item) => `${item.label}: ${item.note || 'Defect noted'}`)
+      .join(' | ');
 
     const updatedAudit = {
       ...selectedAudit,
       inspector: inspectorName,
       score: `${scorePercent}%`,
-      result: auditOutcome,
+      result: selectedOutcome,
+      conditions: conditionsSummary,
     };
 
-    // Construct certificate data if the vehicle passes
-    const certificateData =
-      auditOutcome === 'Passed'
-        ? {
-            certNo: `CERT-2026-${Math.floor(100 + Math.random() * 900)}`,
-            engineNo: '4HK1-982341',
-            makeModel: 'Fleet Vehicle',
-            year: '2023',
-            vehicleType: 'Commercial / Logistics',
-            odometer: '85,400 km',
-            owner: 'SmartFleet Logistics',
-            regNo: selectedAudit.vehicle || selectedAudit.registration,
-            category: 'B',
-            outcome: 'PASS',
-            inspectDate: selectedAudit.date,
-            nextDueDate: '2027-09-21',
-            location: 'Bosch Service Center - Midrand',
-            inspectionType: 'Technical Safety Audit',
-            inspectorName: inspectorName,
-            inspectorId: 'TECH-8842',
-            authorisedName: 'M. N. Muwanguzi',
-          }
-        : null;
+    // Issue certificate if outcome is PASS or PASS WITH CONDITION
+    const issueCert = selectedOutcome === 'PASS' || selectedOutcome === 'PASS WITH CONDITION';
+
+    const certificateData = issueCert
+      ? {
+          certNo: `CERT-2026-${Math.floor(100 + Math.random() * 900)}`,
+          engineNo: '4HK1-982341',
+          makeModel: 'Fleet Vehicle',
+          year: '2023',
+          vehicleType: 'Commercial / Logistics',
+          odometer: '85,400 km',
+          owner: 'SmartFleet Logistics',
+          regNo: selectedAudit.vehicle || selectedAudit.registration,
+          category: 'B',
+          outcome: selectedOutcome,
+          conditionsRequired: conditionsSummary || 'None. Vehicle fully compliant.',
+          inspectDate: selectedAudit.date || new Date().toISOString().split('T')[0],
+          nextDueDate: '2027-09-21',
+          location: 'Bosch Service Center - Midrand',
+          inspectionType: 'Technical Safety Audit',
+          inspectorName: inspectorName,
+          inspectorId: 'TECH-8842',
+          authorisedName: 'M. N. Muwanguzi',
+        }
+      : null;
 
     if (onCompleteInspection) {
       onCompleteInspection(updatedAudit, certificateData);
@@ -90,15 +135,18 @@ export default function InspectionsList({ inspections = [], onCompleteInspection
           </thead>
           <tbody className="divide-y divide-slate-100">
             {inspections.map((item) => {
-              const isPassed = item.result === 'Passed';
-              const isFailed = item.result === 'Failed';
+              const isPassed = item.result === 'Passed' || item.result === 'PASS';
+              const isConditional = item.result === 'PASS WITH CONDITION';
+              const isFailed = item.result === 'Failed' || item.result === 'FAIL';
               const isPending = item.result === 'Pending';
 
               const badgeStyle = isPassed
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : isConditional
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
                 : isFailed
                 ? 'bg-rose-50 text-rose-700 border-rose-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200';
+                : 'bg-slate-50 text-slate-700 border-slate-200';
 
               return (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition">
@@ -117,7 +165,7 @@ export default function InspectionsList({ inspections = [], onCompleteInspection
                   <td className="px-6 py-4 text-right">
                     {isPending ? (
                       <button
-                        onClick={() => setSelectedAudit(item)}
+                        onClick={() => handleOpenModal(item)}
                         className="bg-[#1B365D] hover:bg-blue-900 text-white px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" /> Conduct Audit
@@ -135,8 +183,8 @@ export default function InspectionsList({ inspections = [], onCompleteInspection
 
       {/* CONDUCT AUDIT MODAL */}
       {selectedAudit && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-6">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">
@@ -162,27 +210,92 @@ export default function InspectionsList({ inspections = [], onCompleteInspection
               />
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-600">Safety Check System Items</label>
-              <div className="space-y-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <div className="space-y-2.5 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
                 {checklist.map((chk) => (
-                  <label
-                    key={chk.id}
-                    className="flex items-center justify-between p-2.5 rounded-md bg-white border border-slate-200 cursor-pointer hover:border-slate-300 transition"
-                  >
-                    <span className="text-xs font-medium text-slate-700">{chk.label}</span>
-                    <input
-                      type="checkbox"
-                      checked={chk.passed}
-                      onChange={() => handleToggleCheck(chk.id)}
-                      className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
-                    />
-                  </label>
+                  <div key={chk.id} className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm space-y-2">
+                    <div
+                      className="flex items-center justify-between cursor-pointer"
+                      onClick={() => handleToggleCheck(chk.id)}
+                    >
+                      <span className="text-xs font-medium text-slate-800 flex items-center gap-1.5">
+                        {chk.label}
+                        {chk.isCritical && (
+                          <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                            CRITICAL
+                          </span>
+                        )}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={chk.passed}
+                        onChange={() => {}} // Handled by parent div click
+                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Show condition / defect input when unchecked */}
+                    {!chk.passed && (
+                      <div className="pt-2 border-t border-slate-100">
+                        <label className="block text-[11px] font-bold text-amber-600 mb-1">
+                          Specify Defect / Required Condition:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Pad worn below 2mm, replace within 14 days"
+                          value={chk.note}
+                          onChange={(e) => handleNoteChange(chk.id, e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs border border-amber-300 rounded bg-amber-50/40 text-slate-800 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            {/* Outcome Selection Buttons */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Calculated Audit Outcome</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOutcome('PASS')}
+                  className={`py-2 px-2 text-xs font-bold rounded-lg border transition text-center ${
+                    selectedOutcome === 'PASS'
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  PASS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOutcome('PASS WITH CONDITION')}
+                  className={`py-2 px-2 text-xs font-bold rounded-lg border transition text-center ${
+                    selectedOutcome === 'PASS WITH CONDITION'
+                      ? 'bg-amber-500 text-white border-amber-600 shadow'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  PASS WITH CONDITION
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOutcome('FAIL')}
+                  className={`py-2 px-2 text-xs font-bold rounded-lg border transition text-center ${
+                    selectedOutcome === 'FAIL'
+                      ? 'bg-rose-600 text-white border-rose-700 shadow'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  FAIL
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={() => setSelectedAudit(null)}
                 className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
@@ -191,7 +304,7 @@ export default function InspectionsList({ inspections = [], onCompleteInspection
               </button>
               <button
                 onClick={handleFinishInspection}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5 cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5 cursor-pointer shadow"
               >
                 <Award className="w-4 h-4" /> Complete & Submit Audit
               </button>

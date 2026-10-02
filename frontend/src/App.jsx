@@ -120,7 +120,7 @@ export default function App() {
       <SidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="flex-1 overflow-y-auto">
         {activeTab === 'dashboard' && (
-          <Dashboard onNavigateToBooking={() => setActiveTab('bookings')} />
+          <Dashboard onNavigate={(tab) => setActiveTab(tab)} />
         )}
         {activeTab === 'fleet' && <FleetList />}
         {activeTab === 'bookings' && (

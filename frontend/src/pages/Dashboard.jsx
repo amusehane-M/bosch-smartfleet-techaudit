@@ -1,7 +1,7 @@
 import React from 'react';
 import StatCard from '../components/StatCard';
 
-export default function Dashboard({ onNavigateToBooking }) {
+export default function Dashboard({ onNavigate }) {
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center">
@@ -10,7 +10,7 @@ export default function Dashboard({ onNavigateToBooking }) {
           <p className="text-sm text-slate-500">Welcome back, Fleet Administrator</p>
         </div>
         <button 
-          onClick={onNavigateToBooking}
+          onClick={() => onNavigate && onNavigate('bookings')}
           className="bg-[#005691] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#004270] transition-colors"
         >
           + Book New Inspection
@@ -58,18 +58,26 @@ export default function Dashboard({ onNavigateToBooking }) {
           <div>
             <h2 className="text-base font-bold text-slate-800 mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <button className="w-full text-left bg-slate-50 hover:bg-slate-100 p-3 rounded-lg border border-slate-200 font-semibold text-sm text-slate-700 flex items-center justify-between">
+              <button 
+                onClick={() => onNavigate && onNavigate('fleet')}
+                className="w-full text-left bg-slate-50 hover:bg-slate-100 p-3 rounded-lg border border-slate-200 font-semibold text-sm text-slate-700 flex items-center justify-between transition-colors"
+              >
                 <span>+ Register New Vehicle</span>
                 <span>➔</span>
               </button>
+              
               <button 
-                onClick={onNavigateToBooking}
-                className="w-full text-left bg-slate-50 hover:bg-slate-100 p-3 rounded-lg border border-slate-200 font-semibold text-sm text-slate-700 flex items-center justify-between"
+                onClick={() => onNavigate && onNavigate('bookings')}
+                className="w-full text-left bg-slate-50 hover:bg-slate-100 p-3 rounded-lg border border-slate-200 font-semibold text-sm text-slate-700 flex items-center justify-between transition-colors"
               >
                 <span>+ Book Inspection</span>
                 <span>➔</span>
               </button>
-              <button className="w-full text-left bg-slate-50 hover:bg-slate-100 p-3 rounded-lg border border-slate-200 font-semibold text-sm text-slate-700 flex items-center justify-between">
+
+              <button 
+                onClick={() => onNavigate && onNavigate('inspections')}
+                className="w-full text-left bg-slate-50 hover:bg-slate-100 p-3 rounded-lg border border-slate-200 font-semibold text-sm text-slate-700 flex items-center justify-between transition-colors"
+              >
                 <span>📑 Review Inspection Queue</span>
                 <span>➔</span>
               </button>

@@ -3,10 +3,34 @@ import React, { useState } from 'react';
 export default function LoginRegister({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'inspector' });
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setErrorMessage('');
+
+    // 1. Email Domain Check
+    if (!formData.email.trim().toLowerCase().endsWith('@boschsmartfleet.com')) {
+      setErrorMessage('Access restricted. Email must end with @boschsmartfleet.com (e.g. admin@boschsmartfleet.com).');
+      return;
+    }
+
+    // 2. Password Rule Checks
+    const startsWithCapital = /^[A-Z]/.test(formData.password);
+    const containsSpecialChar = /[@_]/.test(formData.password);
+
+    if (!startsWithCapital || !containsSpecialChar) {
+      setErrorMessage('Password must start with a capital letter and contain at least one special character (@ or _).');
+      return;
+    }
+
+    // Validation passed
     onLoginSuccess();
+  };
+
+  const toggleMode = () => {
+    setIsRegister(!isRegister);
+    setErrorMessage('');
   };
 
   return (
@@ -56,6 +80,13 @@ export default function LoginRegister({ onLoginSuccess }) {
             {isRegister ? 'Register your user profile to start.' : 'Please enter your credentials.'}
           </p>
 
+          {/* Validation Error Banner */}
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/40 rounded-lg text-red-400 text-xs font-medium leading-relaxed">
+              ⚠️ {errorMessage}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {isRegister && (
               <div>
@@ -76,7 +107,7 @@ export default function LoginRegister({ onLoginSuccess }) {
               <input
                 type="email"
                 required
-                placeholder="email@company.co.za"
+                placeholder="admin@boschsmartfleet.com"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -88,7 +119,7 @@ export default function LoginRegister({ onLoginSuccess }) {
               <input
                 type="password"
                 required
-                placeholder="••••••••"
+                placeholder="e.g. Admin@2026"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -105,7 +136,7 @@ export default function LoginRegister({ onLoginSuccess }) {
 
           <div className="mt-6 text-center">
             <button
-              onClick={() => setIsRegister(!isRegister)}
+              onClick={toggleMode}
               className="text-xs text-sky-400 hover:underline font-medium"
             >
               {isRegister ? 'Already have an account? Login Here' : 'Need an account? Register Here'}
